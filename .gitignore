@@ -15,3 +15,5 @@ raw/
 _harness*
 .workbuddy/
 _dev*.log
+
+.vercel
