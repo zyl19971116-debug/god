@@ -52,6 +52,7 @@ const GodStoreContext = createContext<GodStoreValue | null>(null);
 
 const FOLLOWS_KEY = "aigod.follows";
 const SAVED_KEY = "aigod.saved";
+const GENERATED_GODS_KEY = "aigod.generatedGods";
 
 export function GodStoreProvider({ children, initialGods }: { children: ReactNode; initialGods: God[] }) {
   const { address } = useWallet();
@@ -69,6 +70,14 @@ export function GodStoreProvider({ children, initialGods }: { children: ReactNod
       if (f) setFollows(JSON.parse(f));
       const s = window.localStorage.getItem(SAVED_KEY);
       if (s) setSavedProphecies(JSON.parse(s));
+      const generated = window.localStorage.getItem(GENERATED_GODS_KEY);
+      if (generated) {
+        const localGods = JSON.parse(generated) as God[];
+        setGods((current) => [
+          ...localGods,
+          ...current.filter((god) => !localGods.some((local) => local.slug === god.slug)),
+        ]);
+      }
     } catch {
       /* ignore */
     }
@@ -209,6 +218,13 @@ export function GodStoreProvider({ children, initialGods }: { children: ReactNod
 
   const registerGod = useCallback((g: God) => {
     setGods((prev) => (prev.some((x) => x.slug === g.slug) ? prev : [g, ...prev]));
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(GENERATED_GODS_KEY) ?? "[]") as God[];
+      const next = [g, ...saved.filter((item) => item.slug !== g.slug)].slice(0, 20);
+      window.localStorage.setItem(GENERATED_GODS_KEY, JSON.stringify(next));
+    } catch {
+      /* keep the in-memory result when storage is unavailable */
+    }
   }, []);
 
   const value = useMemo<GodStoreValue>(

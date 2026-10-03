@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { store } from "@/lib/database/store";
 import { GodProfile } from "@/components/god/GodProfile";
+import { GeneratedGodFallback } from "@/components/god/GeneratedGodFallback";
 import { sanitizeText } from "@/lib/security/sanitize";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default function GodPage({ params }: Props) {
   const god = store.get(sanitizeText(params.id, 60));
-  if (!god) notFound();
+  if (!god) return <GeneratedGodFallback slug={sanitizeText(params.id, 60)} />;
 
   const prophecies = store.listProphecies(god.slug, 20);
   const publicPrayers = store.listPublicPrayers(god.slug, 12);
