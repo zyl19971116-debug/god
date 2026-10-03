@@ -7,6 +7,14 @@ import type { Chain } from "./types";
  */
 
 export const CHAINS: Record<number, Chain> = {
+  4663: {
+    id: 4663,
+    name: "Robinhood Chain",
+    shortName: "Robinhood Chain",
+    currency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: { default: ["https://rpc.mainnet.chain.robinhood.com"] },
+    explorers: [{ name: "Robinhood Chain Explorer", url: "https://robinhoodchain.blockscout.com" }],
+  },
   1: {
     id: 1,
     name: "Ethereum",

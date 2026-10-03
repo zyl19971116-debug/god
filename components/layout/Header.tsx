@@ -93,6 +93,22 @@ export function Header() {
           </form>
 
           <div className="ml-auto flex items-center gap-3 xl:ml-0">
+            <a
+              href="https://robinhoodchain.blockscout.com/"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Open Robinhood Chain mainnet explorer"
+              title="Robinhood Chain Mainnet"
+              className="group flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#ccff00]/45 bg-[#ccff00] transition-all hover:border-[#ccff00] hover:shadow-[0_0_16px_rgba(204,255,0,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ccff00]/70"
+            >
+              {/* Official compact feather symbol from the Robinhood Chain brand asset library. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/networks/robinhood-chain.jpg"
+                alt="Robinhood Chain"
+                className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              />
+            </a>
             {address ? (
               <div className="relative">
                 <button
