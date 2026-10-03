@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+.env
+.env.local
+.env*.local
+*.tsbuildinfo
+next-env.d.ts
+_install.log
+_env.log
+_images.log
+_rawdirs.log
+_build.log
+raw/
+_harness*
+.workbuddy/
+_dev*.log
