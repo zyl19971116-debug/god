@@ -96,7 +96,10 @@ export function GodStoreProvider({ children, initialGods }: { children: ReactNod
       const res = await fetch("/api/gods?limit=200", { cache: "no-store" });
       if (!res.ok) throw new Error("Unable to reach the temple archives.");
       const data = (await res.json()) as { gods: God[] };
-      setGods(data.gods);
+      setGods((current) => {
+        const local = current.filter((god) => !data.gods.some((remote) => remote.slug === god.slug));
+        return [...data.gods, ...local];
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {

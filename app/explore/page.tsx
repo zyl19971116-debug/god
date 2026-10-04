@@ -7,6 +7,7 @@ import { GodCard } from "@/components/god/GodCard";
 import { SectionHeading } from "@/components/ui/Panel";
 import { ORIGINS } from "@/lib/constants";
 import type { AttributeKey, ExploreSort, God, Origin } from "@/types";
+import { useGodStore } from "@/hooks/useGodStore";
 
 const SORTS: { key: ExploreSort; label: string }[] = [
   { key: "trending", label: "TRENDING" },
@@ -24,6 +25,7 @@ const PAGE = 12;
 
 export default function ExplorePage() {
   const params = useSearchParams();
+  const { gods: walletGods } = useGodStore();
   const [query, setQuery] = useState(params.get("q") ?? "");
   const [sort, setSort] = useState<ExploreSort>("trending");
   const [origin, setOrigin] = useState<Origin | null>(null);
@@ -48,7 +50,26 @@ export default function ExplorePage() {
         const res = await fetch(`/api/gods?${p.toString()}`, { cache: "no-store" });
         if (!res.ok) throw new Error("The archives are unreachable.");
         const data = (await res.json()) as { gods: God[] };
-        setGods((prev) => (reset ? data.gods : [...prev, ...data.gods]));
+        const visible = [
+          ...data.gods,
+          ...walletGods.filter((god) => !data.gods.some((remote) => remote.slug === god.slug)),
+        ].filter((god) => {
+          const search = q.toLowerCase().trim();
+          const matchesSearch = !search || [god.name, god.title, god.domain, god.shortDescription]
+            .some((value) => value.toLowerCase().includes(search));
+          return matchesSearch && (!o || god.origin === o);
+        });
+        visible.sort((a, b) => {
+          if (s === "new") return a.createdAt < b.createdAt ? 1 : -1;
+          if (s === "most_followed") return b.followersCount - a.followersCount;
+          if (s === "most_prayed") return b.prayersCount - a.prayersCount;
+          if (["order", "chaos", "greed", "love", "knowledge"].includes(s)) {
+            const key = s as AttributeKey;
+            return b.attributes[key] - a.attributes[key];
+          }
+          return b.growth - a.growth;
+        });
+        setGods((prev) => (reset ? visible : [...prev, ...visible.filter((god) => !prev.some((item) => item.slug === god.slug))]));
         setExhausted(data.gods.length < PAGE);
         setOffset(nextOffset);
       } catch (e) {
@@ -57,7 +78,7 @@ export default function ExplorePage() {
         setLoading(false);
       }
     },
-    []
+    [walletGods]
   );
 
   useEffect(() => {

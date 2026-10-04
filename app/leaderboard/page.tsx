@@ -75,6 +75,11 @@ export default function LeaderboardPage() {
               <div key={i} className="mb-3 h-12 rounded bg-panel2" />
             ))}
           </div>
+        ) : rows.length === 0 ? (
+          <div className="panel-gold rounded-md px-6 py-20 text-center">
+            <p className="font-display-caps text-xl text-ivory">暂时没有神明生成</p>
+            <p className="mt-3 text-xs text-ivory-faint">连接钱包并创建神明后，排行榜数据会显示在这里。</p>
+          </div>
         ) : (
           <div className="panel overflow-hidden rounded-md">
             <div className="hidden grid-cols-[52px_1fr_150px_130px_110px_90px] gap-4 border-b border-line bg-abyss/50 px-5 py-3.5 font-sans text-[9.5px] uppercase tracking-[0.18em] text-gold-400/80 md:grid">

@@ -57,22 +57,8 @@ class GodStore {
   }
 
   private seed() {
-    SEED_GODS.forEach((s) => {
-      const god = buildGod(s);
-      this.gods.set(god.slug, god);
-      this.followersByGod.set(god.slug, god.followersCount);
-      toPropheciesList(god, s.prophecies).forEach((p) => this.prophecies.set(p.id, p));
-    });
-    this.worldEvents = SEED_WORLD_EVENTS.map((w, i) => ({
-      ...w,
-      id: `we-${i}`,
-      createdAt: new Date(Date.now() - (SEED_WORLD_EVENTS.length - i) * 6 * 86400000).toISOString(),
-    }));
-    this.activities = SEED_ACTIVITY.map((a, i) => ({
-      ...a,
-      id: `act-${i}`,
-      createdAt: new Date(Date.now() - (SEED_ACTIVITY.length - i) * 40 * 60000).toISOString(),
-    }));
+    // Production starts with an empty archive. Only wallet-created gods and
+    // their subsequent activity belong in the public data set.
   }
 
   /* ── Queries ──────────────────────────────────────────────────────────── */
@@ -141,10 +127,10 @@ class GodStore {
   stats(): GlobalStats {
     const gods = [...this.gods.values()];
     return {
-      godsCreated: 12842 + gods.filter((g) => !g.isSeed).length,
-      totalFollowers: 1300000 + gods.reduce((s, g) => s + g.followersCount, 0),
-      dailyPrayers: 84291,
-      countries: 127,
+      godsCreated: gods.length,
+      totalFollowers: gods.reduce((s, g) => s + g.followersCount, 0),
+      dailyPrayers: gods.reduce((s, g) => s + g.prayersCount, 0),
+      countries: 0,
     };
   }
 
