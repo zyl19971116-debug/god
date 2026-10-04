@@ -50,7 +50,7 @@ interface GodStoreValue {
 
 const GodStoreContext = createContext<GodStoreValue | null>(null);
 
-const FOLLOWS_KEY = "aigod.follows";
+const FOLLOWS_KEY_PREFIX = "aigod.follows";
 const SAVED_KEY = "aigod.saved";
 const GENERATED_GODS_KEY = "aigod.generatedGods";
 
@@ -66,8 +66,6 @@ export function GodStoreProvider({ children, initialGods }: { children: ReactNod
 
   useEffect(() => {
     try {
-      const f = window.localStorage.getItem(FOLLOWS_KEY);
-      if (f) setFollows(JSON.parse(f));
       const s = window.localStorage.getItem(SAVED_KEY);
       if (s) setSavedProphecies(JSON.parse(s));
       const generated = window.localStorage.getItem(GENERATED_GODS_KEY);
@@ -82,6 +80,19 @@ export function GodStoreProvider({ children, initialGods }: { children: ReactNod
       /* ignore */
     }
   }, []);
+
+  useEffect(() => {
+    if (!address) {
+      setFollows({});
+      return;
+    }
+    try {
+      const saved = window.localStorage.getItem(`${FOLLOWS_KEY_PREFIX}:${address.toLowerCase()}`);
+      setFollows(saved ? JSON.parse(saved) : {});
+    } catch {
+      setFollows({});
+    }
+  }, [address]);
 
   useEffect(() => {
     if (!toast) return;
@@ -126,12 +137,13 @@ export function GodStoreProvider({ children, initialGods }: { children: ReactNod
 
   const persistFollows = useCallback((next: FollowRecord) => {
     setFollows(next);
+    if (!address) return;
     try {
-      window.localStorage.setItem(FOLLOWS_KEY, JSON.stringify(next));
+      window.localStorage.setItem(`${FOLLOWS_KEY_PREFIX}:${address.toLowerCase()}`, JSON.stringify(next));
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [address]);
 
   const toggleFollow = useCallback(
     async (slug: string) => {
@@ -139,15 +151,17 @@ export function GodStoreProvider({ children, initialGods }: { children: ReactNod
         setToast("Connect your wallet to follow a God.");
         return;
       }
-      const isFollowing = !!follows[slug];
-      const next = { ...follows, [slug]: !isFollowing };
-      if (!isFollowing) delete next[slug === "" ? "" : slug];
-      persistFollows(isFollowing ? omitKey(follows, slug) : next);
+      if (follows[slug]) {
+        setToast("This wallet already follows this God.");
+        return;
+      }
+      const next = { ...follows, [slug]: true };
+      persistFollows(next);
 
       setGods((prev) =>
         prev.map((g) =>
           g.slug === slug
-            ? { ...g, followersCount: Math.max(0, g.followersCount + (isFollowing ? -1 : 1)) }
+            ? { ...g, followersCount: g.followersCount + 1 }
             : g
         )
       );
@@ -156,9 +170,15 @@ export function GodStoreProvider({ children, initialGods }: { children: ReactNod
         const res = await fetch("/api/follow", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ godId: slug, wallet: address, action: isFollowing ? "UNFOLLOW" : "FOLLOW" }),
+          body: JSON.stringify({ godId: slug, wallet: address }),
         });
         if (!res.ok) throw new Error();
+        const data = (await res.json()) as { followersCount?: number };
+        if (typeof data.followersCount === "number") {
+          setGods((prev) =>
+            prev.map((g) => (g.slug === slug ? { ...g, followersCount: data.followersCount! } : g))
+          );
+        }
       } catch {
         persistFollows(follows);
         setToast("Could not reach the temple. Follow not recorded.");
@@ -256,12 +276,6 @@ export function GodStoreProvider({ children, initialGods }: { children: ReactNod
   );
 
   return <GodStoreContext.Provider value={value}>{children}</GodStoreContext.Provider>;
-}
-
-function omitKey(rec: FollowRecord, key: string): FollowRecord {
-  const { [key]: _drop, ...rest } = rec;
-  void _drop;
-  return rest;
 }
 
 export function useGodStore(): GodStoreValue {

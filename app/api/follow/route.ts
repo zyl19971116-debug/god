@@ -18,7 +18,6 @@ export async function POST(req: Request) {
 
   const godId = sanitizeText(body.godId, 60);
   const wallet = body.wallet;
-  const action = body.action === "UNFOLLOW" ? "UNFOLLOW" : "FOLLOW";
 
   if (!godId) return NextResponse.json({ error: "A god must be addressed." }, { status: 400 });
   if (!isEvmAddress(wallet)) return NextResponse.json({ error: "Connect your wallet." }, { status: 401 });
@@ -26,11 +25,8 @@ export async function POST(req: Request) {
   const god = store.get(godId);
   if (!god) return NextResponse.json({ error: "This god is not in the archive." }, { status: 404 });
 
-  if (action === "FOLLOW") {
-    // Duplicate follows are refused server-side.
-    const res = store.follow(god.slug, wallet as string);
-    return NextResponse.json({ followersCount: res.followers, following: true });
-  }
-  store.unfollow(god.slug, wallet as string);
-  return NextResponse.json({ followersCount: god.followersCount, following: false });
+  // A wallet can follow a god only once. store.follow is idempotent and does
+  // not increment the counter when this wallet/god pair already exists.
+  const res = store.follow(god.slug, wallet as string);
+  return NextResponse.json({ followersCount: res.followers, following: true, created: res.ok });
 }

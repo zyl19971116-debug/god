@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Check, HeartHandshake } from "lucide-react";
@@ -14,16 +14,23 @@ export function FollowButton({ slug, className }: { slug: string; className?: st
   const { address } = useWallet();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const clickLock = useRef(false);
   const isFollowing = !!follows[slug];
 
   const onClick = async () => {
+    if (clickLock.current || isFollowing) return;
     if (!address) {
       router.push("/temple");
       return;
     }
+    clickLock.current = true;
     setBusy(true);
-    await toggleFollow(slug);
-    setBusy(false);
+    try {
+      await toggleFollow(slug);
+    } finally {
+      setBusy(false);
+      clickLock.current = false;
+    }
   };
 
   return (
@@ -32,7 +39,7 @@ export function FollowButton({ slug, className }: { slug: string; className?: st
       size="sm"
       className={cn("min-w-[118px]", className)}
       onClick={onClick}
-      disabled={busy}
+      disabled={busy || isFollowing}
       aria-pressed={isFollowing}
     >
       {isFollowing ? (
