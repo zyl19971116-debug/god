@@ -44,6 +44,16 @@ export interface DetectedWallet {
   provider: Eip1193Provider;
 }
 
+interface Eip6963ProviderInfo {
+  name: string;
+  rdns: string;
+}
+
+interface Eip6963ProviderDetail {
+  info: Eip6963ProviderInfo;
+  provider: Eip1193Provider;
+}
+
 export interface WalletOption {
   id: string;
   name: string;
@@ -60,20 +70,51 @@ export const POPULAR_WALLETS: WalletOption[] = [
   { id: "brave", name: "Brave Wallet", installUrl: "https://brave.com/wallet/" },
 ];
 
-export function detectWallets(): DetectedWallet[] {
-  const providers = getInjectedProviders();
+function walletIdentity(provider: Eip1193Provider, info?: Eip6963ProviderInfo): Pick<DetectedWallet, "id" | "name"> {
+  const identity = `${info?.rdns ?? ""} ${info?.name ?? ""}`.toLowerCase();
+  if (provider.isRabby || identity.includes("rabby")) return { id: "rabby", name: "Rabby Wallet" };
+  if (provider.isCoinbaseWallet || identity.includes("coinbase")) return { id: "coinbase", name: "Coinbase Wallet" };
+  if (provider.isTrust || provider.isTrustWallet || identity.includes("trust")) return { id: "trust", name: "Trust Wallet" };
+  if (provider.isOkxWallet || identity.includes("okx")) return { id: "okx", name: "OKX Wallet" };
+  if (provider.isPhantom || identity.includes("phantom")) return { id: "phantom", name: "Phantom" };
+  if (provider.isBraveWallet || identity.includes("brave")) return { id: "brave", name: "Brave Wallet" };
+  if (provider.isMetaMask || identity.includes("metamask")) return { id: "metamask", name: "MetaMask" };
+  return { id: info?.rdns || "injected", name: info?.name || "Browser Wallet" };
+}
+
+function mapProviders(providers: Array<{ provider: Eip1193Provider; info?: Eip6963ProviderInfo }>): DetectedWallet[] {
   const out: DetectedWallet[] = [];
-  for (const p of providers) {
-    if (p.isRabby) out.push({ id: "rabby", name: "Rabby Wallet", provider: p });
-    else if (p.isCoinbaseWallet) out.push({ id: "coinbase", name: "Coinbase Wallet", provider: p });
-    else if (p.isTrust || p.isTrustWallet) out.push({ id: "trust", name: "Trust Wallet", provider: p });
-    else if (p.isOkxWallet) out.push({ id: "okx", name: "OKX Wallet", provider: p });
-    else if (p.isPhantom) out.push({ id: "phantom", name: "Phantom", provider: p });
-    else if (p.isBraveWallet) out.push({ id: "brave", name: "Brave Wallet", provider: p });
-    else if (p.isMetaMask) out.push({ id: "metamask", name: "MetaMask", provider: p });
-    else out.push({ id: "injected", name: "Browser Wallet", provider: p });
+  for (const entry of providers) {
+    const identity = walletIdentity(entry.provider, entry.info);
+    out.push({ ...identity, provider: entry.provider });
   }
   return out.filter((wallet, index) => out.findIndex((item) => item.id === wallet.id) === index);
+}
+
+export function detectWallets(): DetectedWallet[] {
+  return mapProviders(getInjectedProviders().map((provider) => ({ provider })));
+}
+
+/** Discover modern EIP-6963 wallets as well as legacy window.ethereum providers. */
+export async function discoverWallets(timeoutMs = 250): Promise<DetectedWallet[]> {
+  if (typeof window === "undefined") return [];
+  const announced: Eip6963ProviderDetail[] = [];
+  const onAnnounce = (event: Event) => {
+    const detail = (event as CustomEvent<Eip6963ProviderDetail>).detail;
+    if (detail?.provider && detail?.info) announced.push(detail);
+  };
+
+  window.addEventListener("eip6963:announceProvider", onAnnounce as EventListener);
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  await new Promise((resolve) => window.setTimeout(resolve, timeoutMs));
+  window.removeEventListener("eip6963:announceProvider", onAnnounce as EventListener);
+
+  const legacy = getInjectedProviders().map((provider) => ({ provider }));
+  const combined = [
+    ...announced.map(({ provider, info }) => ({ provider, info })),
+    ...legacy.filter(({ provider }) => !announced.some((item) => item.provider === provider)),
+  ];
+  return mapProviders(combined);
 }
 
 export const WALLET_ERRORS: Record<string, string> = {

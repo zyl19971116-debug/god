@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { WalletState } from "@/types";
-import { detectWallets, POPULAR_WALLETS, walletErrorMessage, type Eip1193Provider } from "@/lib/web3/wallet";
+import { discoverWallets, POPULAR_WALLETS, walletErrorMessage, type Eip1193Provider } from "@/lib/web3/wallet";
 import { chainById } from "@/lib/web3/chains";
 
 interface WalletContextValue extends WalletState {
@@ -38,22 +38,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [hasProvider, setHasProvider] = useState(false);
 
   useEffect(() => {
-    const detected = detectWallets();
-    setAvailable(
-      POPULAR_WALLETS.map((wallet) => ({
-        ...wallet,
-        installed: detected.some((detectedWallet) => detectedWallet.id === wallet.id),
-      })).concat(
-        detected
-          .filter((wallet) => !POPULAR_WALLETS.some((popular) => popular.id === wallet.id))
-          .map((wallet) => ({ ...wallet, installUrl: "", installed: true }))
-      )
-    );
-    setHasProvider(detected.length > 0);
-    const saved = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-    if (!saved || detected.length === 0) return;
-    const found = detected.find((d) => d.id === saved) ?? detected[0];
-    void trySilentReconnect(found.provider, found.id);
+    let active = true;
+    void discoverWallets().then((detected) => {
+      if (!active) return;
+      setAvailable(
+        POPULAR_WALLETS.map((wallet) => ({
+          ...wallet,
+          installed: detected.some((detectedWallet) => detectedWallet.id === wallet.id),
+        })).concat(
+          detected
+            .filter((wallet) => !POPULAR_WALLETS.some((popular) => popular.id === wallet.id))
+            .map((wallet) => ({ ...wallet, installUrl: "", installed: true }))
+        )
+      );
+      setHasProvider(detected.length > 0);
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (!saved || detected.length === 0) return;
+      const found = detected.find((d) => d.id === saved) ?? detected[0];
+      void trySilentReconnect(found.provider, found.id);
+    });
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -88,7 +92,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(
     async (id?: string): Promise<boolean> => {
       setState((s) => ({ ...s, connecting: true, error: null }));
-      const detected = detectWallets();
+      const detected = await discoverWallets();
       if (detected.length === 0) {
         setState({
           address: null,
