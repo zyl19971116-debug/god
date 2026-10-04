@@ -190,23 +190,34 @@ export function GodStoreProvider({ children, initialGods }: { children: ReactNod
   const sendPrayer = useCallback(
     async (slug: string, text: string, isPublic: boolean) => {
       if (!address) return { ok: false, error: "Connect your wallet to pray." };
+      const god = getGod(slug);
+      if (!god) return { ok: false, error: "This God is not available." };
       try {
         const res = await fetch("/api/prayer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ godId: slug, wallet: address, text, isPublic }),
+          body: JSON.stringify({ godId: slug, wallet: address, text, isPublic, god }),
         });
         const data = (await res.json()) as { prayer?: Prayer; error?: string };
         if (!res.ok || !data.prayer) return { ok: false, error: data.error ?? "The God did not answer." };
         setGods((prev) =>
           prev.map((g) => (g.slug === slug ? { ...g, prayersCount: g.prayersCount + 1 } : g))
         );
+        try {
+          const saved = JSON.parse(window.localStorage.getItem(GENERATED_GODS_KEY) ?? "[]") as God[];
+          window.localStorage.setItem(
+            GENERATED_GODS_KEY,
+            JSON.stringify(saved.map((g) => (g.slug === slug ? { ...g, prayersCount: g.prayersCount + 1 } : g)))
+          );
+        } catch {
+          /* keep the in-memory count when storage is unavailable */
+        }
         return { ok: true, prayer: data.prayer };
       } catch {
         return { ok: false, error: "The temple is unreachable. Try again shortly." };
       }
     },
-    [address]
+    [address, getGod]
   );
 
   const reactToProphecy = useCallback(async (id: string, kind: "BELIEVE" | "DOUBT") => {
