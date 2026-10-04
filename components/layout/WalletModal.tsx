@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Check, Download, Loader2 } from "lucide-react";
+import { AlertCircle, Check, Link2, Loader2 } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/Button";
 import { shortWallet } from "@/lib/format";
@@ -97,16 +97,10 @@ export function WalletModal({ open, onClose }: Props) {
             ) : (
               <div className="space-y-2.5">
                 {wallets.map((w) => (
-                  <a
+                  <button
                     key={w.id}
-                    href={w.installed ? undefined : w.installUrl}
-                    target={w.installed ? undefined : "_blank"}
-                    rel={w.installed ? undefined : "noreferrer"}
-                    onClick={(event) => {
-                      if (!w.installed) return;
-                      event.preventDefault();
-                      void handleConnect(w.id);
-                    }}
+                    type="button"
+                    onClick={() => void handleConnect(w.id)}
                     className="flex w-full items-center gap-3 rounded-sm border border-line px-4 py-3.5 text-left transition-all hover:border-gold-500/50 hover:bg-gold-500/[0.05]"
                   >
                     <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white/[0.06]">
@@ -114,9 +108,9 @@ export function WalletModal({ open, onClose }: Props) {
                     </span>
                     <span className="flex-1 text-sm text-ivory">{w.name}</span>
                     <span className="flex items-center gap-1 text-[10px] uppercase tracking-[0.12em] text-ivory-faint">
-                      {w.installed ? <><Check size={11} /> READY</> : <><Download size={11} /> INSTALL</>}
+                      {w.installed ? <><Check size={11} /> READY</> : <><Link2 size={11} /> CONNECT</>}
                     </span>
-                  </a>
+                  </button>
                 ))}
                 <p className="pt-3 text-[10px] leading-relaxed text-ivory-faint/70">
                   AI GOD never requests your private keys. We only read your public address.
@@ -124,7 +118,7 @@ export function WalletModal({ open, onClose }: Props) {
               </div>
             )}
             {!hasProvider && phase === "pick" && (
-              <p className="mt-4 text-[10px] text-ivory-faint/60">Install a wallet extension, then refresh this page.</p>
+              <p className="mt-4 text-[10px] text-ivory-faint/60">Open your wallet app or browser extension before connecting.</p>
             )}
           </motion.div>
         </motion.div>

@@ -98,7 +98,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         });
         return false;
       }
-      const target = (id && detected.find((d) => d.id === id)) || detected[0];
+      const target = id ? detected.find((d) => d.id === id) : detected[0];
+      if (!target) {
+        setState({
+          address: null,
+          chainId: null,
+          connecting: false,
+          error: "The selected wallet was not detected. Open its app or browser extension, then try again.",
+        });
+        return false;
+      }
       try {
         const accounts = (await target.provider.request({ method: "eth_requestAccounts" })) as string[];
         if (!accounts?.length) throw new Error("no accounts");
